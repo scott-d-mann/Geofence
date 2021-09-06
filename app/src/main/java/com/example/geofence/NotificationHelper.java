@@ -21,23 +21,21 @@ public class NotificationHelper{
         String CHANNEL_DESCRIPTION = "Geofence notofications";
 
         // Make a channel if necessary
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Create the NotificationChannel, but only on API 26+ because
-            // the NotificationChannel class is new and not in the support library
-            CharSequence name = CHANNEL_NAME;
-            String description = CHANNEL_DESCRIPTION;
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel channel =
-                    new NotificationChannel(CHANNEL_ID, name, importance);
-            channel.setDescription(description);
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        CharSequence name = CHANNEL_NAME;
+        String description = CHANNEL_DESCRIPTION;
+        int importance = NotificationManager.IMPORTANCE_HIGH;
+        NotificationChannel channel =
+                new NotificationChannel(CHANNEL_ID, name, importance);
+        channel.setDescription(description);
 
-            // Add the channel
-            NotificationManager notificationManager =
-                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        // Add the channel
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-            if (notificationManager != null) {
-                notificationManager.createNotificationChannel(channel);
-            }
+        if (notificationManager != null) {
+            notificationManager.createNotificationChannel(channel);
         }
 
         // Create the notification
