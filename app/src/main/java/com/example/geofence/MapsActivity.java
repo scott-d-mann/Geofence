@@ -1,13 +1,8 @@
 package com.example.geofence;
 
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.FragmentActivity;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -15,6 +10,12 @@ import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.FragmentActivity;
 
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -33,17 +34,23 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
-import java.util.Arrays;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
+    //Google Map api variables
     private GoogleMap mMap;
     private GeofencingClient geofencingClient;
+    //debug
     private String TAG = "MapAct";
-    private int REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS = 345;
+    //Required permissions array
+    final String[] PERMISSIONS_29P = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION};
+    final String[] PERMISSIONS_29M = {Manifest.permission.ACCESS_FINE_LOCATION};
+    //Latrobe Lat & Lang
     private Double myLat = -37.722358; //Default to latrobe
     private Double myLong = 145.049592;
+    //Fused location provider
     private FusedLocationProviderClient fusedLocationClient;
+    //Geofence variables
     private final static int GEOFENCE_RADIUS_IN_METERS = 100; //(Note: Android does not recommend using a smaller radius than 100 meters as it cannot guarantee the accuracy.)
     private final static long GEOFENCE_EXPIRATION_IN_MILLISECONDS = Geofence.NEVER_EXPIRE;
     private PendingIntent geofencePendingIntent;
@@ -52,6 +59,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -66,79 +74,75 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+        Log.d(TAG, "Map ready");
         //once map is ready get user location to set marker & geofence
         initUserLocation();
     }
 
     private void initUserLocation() {
-        String[] Permissions = new String[0];
         //If else has been included as requesting access background location in SDK < Q can cause errors but is required for >= API level 29
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q)
-        {
-            Permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION, };
-        }
-        else
-        {
-            Permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,};
-        }
-        if(!hasPermissions(this, Permissions)){
-            ActivityCompat.requestPermissions(this, Permissions, REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS);
-        }
-        //No permissions need to be requested continue app function
-        Log.d(TAG, "Permissions passed setting location");
-        getLastLocation();
-
-    }
-
-    // Get results from permission request
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS) {
-            if (grantResults.length == 2) //if your app targets Android 10 (API level 29) or higher
-            {
-                boolean fineLocationPermission = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                boolean bgLocationPermission = grantResults[1] == PackageManager.PERMISSION_GRANTED;
-                Log.d(TAG, permissions[0] + " " + fineLocationPermission);
-                Log.d(TAG, permissions[1] + " " + bgLocationPermission);
-                if (fineLocationPermission && bgLocationPermission) {
-                    Toast.makeText(this, "Permission Granted for both background & fine location", Toast.LENGTH_LONG).show();
-                    getLastLocation();
-                } else {
-                    Toast.makeText(this, "Permission Denied for required permissions", Toast.LENGTH_LONG).show();
-                }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            //get the initial location
+            if (hasPermissions(PERMISSIONS_29P)) {
+                Log.d(TAG, "Build >= Q, App has required permissions, getting last location and creating location request");
+                getLastLocation(); //get start location
+            } else {
+                Log.d(TAG, "App does not have required permissions, asking now");
+                askPermissions(PERMISSIONS_29P);
             }
-            else if(grantResults.length == 1) // if your app targets < API 29
-            {
-                boolean fineLocationPermission = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                Log.d(TAG, permissions[0] + " " + fineLocationPermission);
-                if (fineLocationPermission) {
-                    Toast.makeText(this, "Permission Granted for fine location", Toast.LENGTH_LONG).show();
-                    getLastLocation();
-                } else {
-                    Toast.makeText(this, "Permission Denied for fine location", Toast.LENGTH_LONG).show();
-                }
+        } else {
+            //get the initial location
+            if (hasPermissions(PERMISSIONS_29M)) {
+                Log.d(TAG, "Build < Q, App has required permissions, getting last location and creating location request");
+                getLastLocation(); //get start location
+            } else {
+                Log.d(TAG, "App does not have required permissions, asking now");
+                askPermissions(PERMISSIONS_29M);
             }
         }
     }
 
-    //helper to check if permissions are all granted
-    public boolean hasPermissions(Context context, String... permissions){
-        boolean passed = true;
-        if(context != null && permissions != null){
-            for(String permission: permissions){
-                if(ActivityCompat.checkSelfPermission(context, permission)!=PackageManager.PERMISSION_GRANTED){
-                    Log.d(TAG, "has permission check failed for:" + permission);
-                    passed = false;
-                }
+
+    //helper function to check permission status
+    private boolean hasPermissions(String[] perms) {
+        boolean permissionStatus = true;
+        for (String permission : perms) {
+            if (ActivityCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "Permission is granted: " + permission);
+            } else {
+                Log.d(TAG, "Permission is not granted: " + permission);
+                permissionStatus = false;
             }
         }
-        Log.d(TAG, "has permission check passed for:" + Arrays.toString(permissions));
-        return passed;
+        return permissionStatus;
     }
+
+    //helper function to ask user permissions
+    private void askPermissions(String[] perms) {
+        if (!hasPermissions(perms)) {
+            Log.d(TAG, "Launching multiple contract permission launcher for ALL required permissions");
+            multiplePermissionActivityResultLauncher.launch(perms);
+        } else {
+            Log.d(TAG, "All permissions are already granted");
+        }
+    }
+
+    //Result launcher for permissions
+    private final ActivityResultLauncher<String[]> multiplePermissionActivityResultLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), isGranted -> {
+                Log.d(TAG, "Launcher result: " + isGranted.toString());
+                //permissions are granted lets get to work!
+                getLastLocation(); //get start location
+                if (isGranted.containsValue(false)) {
+                    Log.d(TAG, "At least one of the permissions was not granted, please enable permissions to ensure app functionality");
+                }
+            });
+
 
     //get last location to use as centre of geofence
     @SuppressLint("MissingPermission")
@@ -167,8 +171,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @SuppressLint("MissingPermission")
-    private void addGeofence()
-    {
+    private void addGeofence() {
         //first we build geofence object
         Geofence geofence = new Geofence.Builder()
                 .setRequestId("My house")
@@ -247,13 +250,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         CircleOptions circleOptions = new CircleOptions();
         circleOptions.center(latLng);
         circleOptions.radius((float) MapsActivity.GEOFENCE_RADIUS_IN_METERS);
-        circleOptions.strokeColor(Color.argb(255, 255, 0,0));
-        circleOptions.fillColor(Color.argb(64, 255, 0,0));
+        circleOptions.strokeColor(Color.argb(255, 255, 0, 0));
+        circleOptions.fillColor(Color.argb(64, 255, 0, 0));
         circleOptions.strokeWidth(4);
         mMap.addCircle(circleOptions);
     }
 
-    // I have inc luded this to remove the geofence when activity is destroyed, if you want the app
+    // I have included this to remove the geofence when activity is destroyed, if you want the app
     // to run in the background you may want to move this code to a button or other UI element
     @Override
     protected void onDestroy() {
