@@ -9,6 +9,8 @@ import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -54,6 +56,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private final static int GEOFENCE_RADIUS_IN_METERS = 100; //(Note: Android does not recommend using a smaller radius than 100 meters as it cannot guarantee the accuracy.)
     private final static long GEOFENCE_EXPIRATION_IN_MILLISECONDS = Geofence.NEVER_EXPIRE;
     private PendingIntent geofencePendingIntent;
+    //UI
+    Button button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +76,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //fused location client, to get your location
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        button = findViewById(R.id.myButton);
+        //hide button until map is ready (and geofence set up)
+        button.setVisibility(View.INVISIBLE);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                removeGeofence();
+            }
+        });
     }
 
 
@@ -82,6 +95,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Log.d(TAG, "Map ready");
         //once map is ready get user location to set marker & geofence
         initUserLocation();
+        //make the stop geofences button visable
+        button.setVisibility(View.VISIBLE);
     }
 
     private void initUserLocation() {
@@ -256,12 +271,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.addCircle(circleOptions);
     }
 
-    // I have included this to remove the geofence when activity is destroyed, if you want the app
-    // to run in the background you may want to move this code to a button or other UI element
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Toast.makeText(getApplicationContext(), "Geofence removed", Toast.LENGTH_SHORT).show();
+    private void removeGeofence()
+    {
         //remove geofences
         geofencingClient.removeGeofences(getGeofencePendingIntent())
                 .addOnSuccessListener(this, new OnSuccessListener<Void>() {
@@ -269,6 +280,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     public void onSuccess(Void aVoid) {
                         // Geofences removed
                         Toast.makeText(getApplicationContext(), "Geofence removed", Toast.LENGTH_SHORT).show();
+                        button.setEnabled(false);
                     }
                 })
                 .addOnFailureListener(this, new OnFailureListener() {
@@ -278,5 +290,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         Log.d(TAG, "Failed to remove geofences: " + e.toString());
                     }
                 });
+    }
+
+    // I have included this to remove the geofence when activity is destroyed, if you want the app
+    // to run in the background you may want to remove this code as it is available via the button
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        removeGeofence();
     }
 }

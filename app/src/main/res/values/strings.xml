@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Geofence</string>
     <string name="title_activity_maps">Geofence demo</string>
+    <string name="disable_geofence">Disable Geofence</string>
 </resources>
