@@ -45,8 +45,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //debug
     private String TAG = "MapAct";
     //Required permissions array
-    final String[] PERMISSIONS_29P = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION};
-    final String[] PERMISSIONS_29M = {Manifest.permission.ACCESS_FINE_LOCATION};
+
+    final String[] PERMISSIONS_29M = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION};
     //Latrobe Lat & Lang
     private Double myLat = -37.722358; //Default to latrobe
     private Double myLong = 145.049592;
