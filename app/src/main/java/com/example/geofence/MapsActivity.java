@@ -101,16 +101,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void initUserLocation() {
         //If else has been included as requesting access background location in SDK < Q can cause errors but is required for >= API level 29
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            //get the initial location
-            if (hasPermissions(PERMISSIONS_29P)) {
-                Log.d(TAG, "Build >= Q, App has required permissions, getting last location and creating location request");
-                getLastLocation(); //get start location
-            } else {
-                Log.d(TAG, "App does not have required permissions, asking now");
-                askPermissions(PERMISSIONS_29P);
-            }
-        } else {
+
             //get the initial location
             if (hasPermissions(PERMISSIONS_29M)) {
                 Log.d(TAG, "Build < Q, App has required permissions, getting last location and creating location request");
@@ -119,7 +110,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d(TAG, "App does not have required permissions, asking now");
                 askPermissions(PERMISSIONS_29M);
             }
-        }
     }
 
 
@@ -234,10 +224,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return geofencePendingIntent;
         }
         Intent intent = new Intent(this, GeofenceBroadcastReceiver.class);
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-        // calling addGeofences() and removeGeofences().
-        geofencePendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.
-                FLAG_UPDATE_CURRENT);
+
+        geofencePendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
         return geofencePendingIntent;
     }
 
